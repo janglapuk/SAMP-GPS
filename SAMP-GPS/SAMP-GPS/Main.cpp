@@ -4,7 +4,7 @@ Authors: GTA Community. See more here
 https://github.com/DK22Pac/plugin-sdk
 Do not delete this comment block. Respect others' work!
 
-This plugin is DK22Pac's GPS modified version by janglapuk (for SA:MP)
+This plugin based by DK22Pac's GPS, modified SA:MP version by janglapuk (for SA:MP)
 https://github.com/janglapuk/SAMP-GPS
 */
 
@@ -39,7 +39,7 @@ typedef struct stOpcodeRelCall
 {
 	BYTE bOpcode;
 	DWORD dwRelAddr;
-} _stOpcodeRelCall;
+} OpcodeRelCall;
 #pragma pack(pop)
 
 class GPS {
@@ -52,11 +52,15 @@ public:
 	}
 
 	~GPS() {
+		// Check if thread still running on process
 		if (hThread != NULL)
 			TerminateThread(hThread, 0);
 	}
 
 	static LPVOID WINAPI init(LPVOID *lpParam) {
+		MODULEINFO miSampDll;
+		DWORD dwSampDllBaseAddr, dwSampDllEndAddr, dwCallAddr;
+
 		GPS *sender = (GPS *)lpParam;
 
 		stOpcodeRelCall *fnGameProc = (stOpcodeRelCall *)E_ADDR_GAMEPROCESS;
@@ -66,9 +70,6 @@ public:
 			Sleep(100);
 
 		while (true) {
-			MODULEINFO miSampDll;
-			DWORD dwSampDllBaseAddr, dwSampDllEndAddr, dwCallAddr;
-
 			Sleep(100);
 
 			// Get samp.dll module information to get base address and end address
@@ -89,8 +90,8 @@ public:
 				break;
 		}
 
-		// Just wait a few secs for the game loaded, to avoid any conflicts
-		// I didn't know what is the proper function
+		// Just wait a few secs for the game loaded fully to avoid any conflicts and crashes
+		// I don't know what the elegant way is :)
 		while (!FindPlayerPed(0))
 			Sleep(5000);
 
