@@ -9,13 +9,13 @@ https://github.com/janglapuk/SAMP-GPS
 */
 
 #include "plugin.h"
-#include "game_sa\RenderWare.h"
-#include "game_sa\common.h"
-#include "game_sa\CMenuManager.h"
-#include "game_sa\CRadar.h"
-#include "game_sa\CWorld.h"
-#include "game_sa\RenderWare.h"
-#include "game_sa\CFont.h"
+#include "RenderWare.h"
+#include "common.h"
+#include "CMenuManager.h"
+#include "CRadar.h"
+#include "CWorld.h"
+#include "RenderWare.h"
+#include "CFont.h"
 #include "d3d9.h"
 
 #include <Psapi.h>
@@ -114,10 +114,10 @@ public:
 		Events::gameProcessEvent += []() {
 			if (FrontEndMenuManager.m_nTargetBlipIndex
 				&& CRadar::ms_RadarTrace[LOWORD(FrontEndMenuManager.m_nTargetBlipIndex)].m_nCounter == HIWORD(FrontEndMenuManager.m_nTargetBlipIndex)
-				&& CRadar::ms_RadarTrace[LOWORD(FrontEndMenuManager.m_nTargetBlipIndex)].m_nBlipDisplayFlag
+				&& CRadar::ms_RadarTrace[LOWORD(FrontEndMenuManager.m_nTargetBlipIndex)].m_nBlipDisplay
 				&& FindPlayerPed()
 				&& DistanceBetweenPoints(CVector2D(FindPlayerCoors(0)),
-					CVector2D(CRadar::ms_RadarTrace[LOWORD(FrontEndMenuManager.m_nTargetBlipIndex)].m_vPosition)) < MAX_TARGET_DISTANCE)
+					CVector2D(CRadar::ms_RadarTrace[LOWORD(FrontEndMenuManager.m_nTargetBlipIndex)].m_vecPos)) < MAX_TARGET_DISTANCE)
 			{
 				CRadar::ClearBlip(FrontEndMenuManager.m_nTargetBlipIndex);
 				FrontEndMenuManager.m_nTargetBlipIndex = 0;
@@ -135,9 +135,9 @@ public:
 				&& playa->m_pVehicle->m_nVehicleSubClass != VEHICLE_BMX
 				&& FrontEndMenuManager.m_nTargetBlipIndex
 				&& CRadar::ms_RadarTrace[LOWORD(FrontEndMenuManager.m_nTargetBlipIndex)].m_nCounter == HIWORD(FrontEndMenuManager.m_nTargetBlipIndex)
-				&& CRadar::ms_RadarTrace[LOWORD(FrontEndMenuManager.m_nTargetBlipIndex)].m_nBlipDisplayFlag)
+				&& CRadar::ms_RadarTrace[LOWORD(FrontEndMenuManager.m_nTargetBlipIndex)].m_nBlipDisplay)
 			{
-				CVector destPosn = CRadar::ms_RadarTrace[LOWORD(FrontEndMenuManager.m_nTargetBlipIndex)].m_vPosition;
+				CVector destPosn = CRadar::ms_RadarTrace[LOWORD(FrontEndMenuManager.m_nTargetBlipIndex)].m_vecPos;
 				destPosn.z = CWorld::FindGroundZForCoord(destPosn.x, destPosn.y);
 
 				short nodesCount = 0;
@@ -150,7 +150,7 @@ public:
 						CVector nodePosn = ThePaths.GetPathNode(resultNodes[i])->GetNodeCoors();
 						CVector2D tmpPoint;
 						CRadar::TransformRealWorldPointToRadarSpace(tmpPoint, CVector2D(nodePosn.x, nodePosn.y));
-						if (!FrontEndMenuManager.drawRadarOrMap)
+						if (!FrontEndMenuManager.m_bDrawRadarOrMap)
 							CRadar::TransformRadarPointToScreenSpace(nodePoints[i], tmpPoint);
 						else {
 							CRadar::LimitRadarPoint(tmpPoint);
@@ -161,13 +161,14 @@ public:
 						}
 					}
 
-					if (!FrontEndMenuManager.drawRadarOrMap
+					if (!FrontEndMenuManager.m_bDrawRadarOrMap
 						&& reinterpret_cast<D3DCAPS9 const*>(RwD3D9GetCaps())->RasterCaps & D3DPRASTERCAPS_SCISSORTEST)
 					{
 						RECT rect;
 						CVector2D posn;
 						CRadar::TransformRadarPointToScreenSpace(posn, CVector2D(-1.0f, -1.0f));
-						rect.left = posn.x + 2.0f; rect.bottom = posn.y - 2.0f;
+						rect.left = static_cast<LONG>(posn.x + 2.0f);
+                                                rect.bottom = static_cast<LONG>(posn.y - 2.0f);
 						CRadar::TransformRadarPointToScreenSpace(posn, CVector2D(1.0f, 1.0f));
 						rect.right = posn.x - 2.0f; rect.top = posn.y + 2.0f;
 						GetD3DDevice()->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
@@ -181,7 +182,7 @@ public:
 						CVector2D point[4], shift[2];
 						CVector2D dir = nodePoints[i + 1] - nodePoints[i];
 						float angle = atan2(dir.y, dir.x);
-						if (!FrontEndMenuManager.drawRadarOrMap) {
+						if (!FrontEndMenuManager.m_bDrawRadarOrMap) {
 							shift[0].x = cosf(angle - 1.5707963f) * GPS_LINE_WIDTH;
 							shift[0].y = sinf(angle - 1.5707963f) * GPS_LINE_WIDTH;
 							shift[1].x = cosf(angle + 1.5707963f) * GPS_LINE_WIDTH;
@@ -208,7 +209,7 @@ public:
 
 					RwIm2DRenderPrimitive(rwPRIMTYPETRISTRIP, lineVerts, 4 * (nodesCount - 1));
 
-					if (!FrontEndMenuManager.drawRadarOrMap
+					if (!FrontEndMenuManager.m_bDrawRadarOrMap
 						&& reinterpret_cast<D3DCAPS9 const*>(RwD3D9GetCaps())->RasterCaps & D3DPRASTERCAPS_SCISSORTEST)
 					{
 						GetD3DDevice()->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
@@ -222,14 +223,14 @@ public:
 
 		Events::drawHudEvent += [] {
 			if (gpsShown) {
-				CFont::SetAlignment(ALIGN_CENTER);
+				CFont::SetOrientation(ALIGN_CENTER);
 				CFont::SetColor(CRGBA(200, 200, 200, 255));
 				CFont::SetBackground(false, false);
 				CFont::SetWrapx(500.0f);
 				CFont::SetScale(0.4f * static_cast<float>(RsGlobal.maximumWidth) / 640.0f,
 					0.8f * static_cast<float>(RsGlobal.maximumHeight) / 448.0f);
 				CFont::SetFontStyle(FONT_SUBTITLES);
-				CFont::SetProp(true);
+				CFont::SetProportional(true);
 				CFont::SetDropShadowPosition(1);
 				CFont::SetDropColor(CRGBA(0, 0, 0, 255));
 				CVector2D radarBottom;
