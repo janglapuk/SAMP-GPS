@@ -171,8 +171,8 @@ public:
                                                 rect.bottom = static_cast<LONG>(posn.y - 2.0f);
 						CRadar::TransformRadarPointToScreenSpace(posn, CVector2D(1.0f, 1.0f));
 						rect.right = posn.x - 2.0f; rect.top = posn.y + 2.0f;
-						GetD3DDevice()->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
-						GetD3DDevice()->SetScissorRect(&rect);
+						GetD3DDevice<IDirect3DDevice9>()->SetRenderState(D3DRS_SCISSORTESTENABLE, TRUE);
+						GetD3DDevice<IDirect3DDevice9>()->SetScissorRect(&rect);
 					}
 
 					RwRenderStateSet(rwRENDERSTATETEXTURERASTER, NULL);
@@ -212,7 +212,7 @@ public:
 					if (!FrontEndMenuManager.m_bDrawRadarOrMap
 						&& reinterpret_cast<D3DCAPS9 const*>(RwD3D9GetCaps())->RasterCaps & D3DPRASTERCAPS_SCISSORTEST)
 					{
-						GetD3DDevice()->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
+						GetD3DDevice<IDirect3DDevice9>()->SetRenderState(D3DRS_SCISSORTESTENABLE, FALSE);
 					}
 
 					gpsDistance += DistanceBetweenPoints(FindPlayerCoors(0), ThePaths.GetPathNode(resultNodes[0])->GetNodeCoors());
